@@ -50,6 +50,7 @@
     height: 34px;
   }
   button:hover { background: #375aa0; }
+  button:disabled { opacity: .6; cursor: default; }
   button.secondary {
     background: #fff;
     color: #4472c4;
@@ -84,11 +85,13 @@
     pointer-events: none;
   }
   .toast.show { opacity: 1; }
+  .toast.error { background: #b3261e; }
   .actions { display: flex; gap: 8px; }
   .month-nav { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #374151; font-weight: 600; }
-  .page-footer { margin-top: 26px; text-align: right; }
+  .page-footer { margin-top: 26px; display: flex; justify-content: space-between; align-items: center; }
   .page-footer a { font-size: 11px; color: #c7cad1; text-decoration: none; }
   .page-footer a:hover { color: #9ca3af; }
+  .updated-at { font-size: 11px; color: #9ca3af; }
   .admin-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
   .admin-badge { font-size: 12px; color: #6b7280; }
   .back-link { font-size: 12px; color: #4472c4; text-decoration: none; cursor: pointer; }
@@ -100,6 +103,7 @@
   .gate-wrap .card { text-align: left; }
   .gate-error { color: #d92d20; font-size: 12px; margin-top: 6px; display: none; }
   .hidden { display: none !important; }
+  .loading-row td { text-align: center; color: #9ca3af; padding: 20px; }
 </style>
 </head>
 <body>
@@ -121,12 +125,15 @@
         <thead>
           <tr><th>날짜</th><th>유입수</th><th>광고상태</th></tr>
         </thead>
-        <tbody id="publicDailyTbody"></tbody>
+        <tbody id="publicDailyTbody"><tr class="loading-row"><td colspan="3">불러오는 중...</td></tr></tbody>
       </table>
     </div>
   </div>
 
-  <div class="page-footer"><a href="#admin">관리자</a></div>
+  <div class="page-footer">
+    <span class="updated-at" id="publicUpdatedAt"></span>
+    <a href="#admin">관리자</a>
+  </div>
 </div>
 
 <!-- ===================== ADMIN GATE ===================== -->
@@ -153,7 +160,7 @@
     <h1 style="margin:0;">관리자 페이지 — 파주금촌점 플레이스 트래커</h1>
     <a class="back-link" href="#">← 공개 페이지 보기</a>
   </div>
-  <div class="sub">이 페이지는 관리자만 볼 수 있어요. 여기서 입력한 데이터가 공개 페이지에도 그대로 반영됩니다.</div>
+  <div class="sub">이 페이지는 관리자만 볼 수 있어요. 여기서 저장하면 서버에 반영되고, 공개 페이지에서도 새로고침하면 바로 보여요.</div>
 
   <div class="card">
     <h2>월별 유입 추이 (2025-07 ~ 진행중)</h2>
@@ -183,7 +190,7 @@
         <label>리뷰수(당일 누적)</label>
         <input type="number" id="f-review" min="0" placeholder="선택" />
       </div>
-      <button type="submit">저장</button>
+      <button type="submit" id="saveBtn">저장</button>
       <button type="button" class="secondary" id="clearFormBtn">폼 비우기</button>
     </form>
     <div class="foot-note">같은 날짜로 다시 저장하면 값이 갱신돼요. 아래 표에서 행을 클릭하면 그 날짜 값이 폼에 자동으로 채워집니다.</div>
@@ -207,11 +214,12 @@
             <th>날짜</th><th>유입수</th><th>전화클릭</th><th>길찾기</th><th>리뷰(누적)</th><th>광고상태</th>
           </tr>
         </thead>
-        <tbody id="adminDailyTbody"></tbody>
+        <tbody id="adminDailyTbody"><tr class="loading-row"><td colspan="6">불러오는 중...</td></tr></tbody>
       </table>
     </div>
     <div class="actions" style="margin-top:12px;">
       <button type="button" class="secondary" id="exportCsvBtn">CSV로 내보내기</button>
+      <button type="button" class="secondary" id="refreshBtn">새로고침</button>
     </div>
     <div class="foot-note">광고 시작 예정일(2026-07-09) 이후는 자동으로 "운영중"으로 표시됩니다. 화살표로 이전/다음 달을 볼 수 있어요.</div>
   </div>
@@ -222,9 +230,9 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
 <script>
 const AD_START = "2026-07-09";
-const STORAGE_KEY = "goldPajuPlaceDailyV1";
 const ADMIN_SESSION_KEY = "goldPajuAdminUnlocked";
 const ADMIN_PASSWORD = "0909@";
+const PUBLIC_POLL_MS = 25000;
 
 const MONTHLY_HISTORY = [
   { label: "2025-07(9~31)", value: 468 },
@@ -241,29 +249,16 @@ const MONTHLY_HISTORY = [
   { label: "2026-06", value: 807 },
 ];
 
-const SEED_DAILY = {
-  "2026-07-01": { inflow: 17, call: null, direction: null, review: null },
-  "2026-07-02": { inflow: 12, call: null, direction: null, review: null },
-  "2026-07-03": { inflow: 33, call: null, direction: null, review: null },
-  "2026-07-04": { inflow: 15, call: null, direction: null, review: null },
-  "2026-07-05": { inflow: 16, call: null, direction: null, review: null },
-  "2026-07-06": { inflow: 15, call: null, direction: null, review: null },
-  "2026-07-07": { inflow: 10, call: null, direction: null, review: null },
-};
+let dailyData = {};
+let dataLoaded = false;
 
-function loadDaily() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw) {
-    try { return JSON.parse(raw); } catch (e) {}
-  }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_DAILY));
-  return { ...SEED_DAILY };
+async function fetchDaily() {
+  const r = await fetch('/api/data', { cache: 'no-store' });
+  if (!r.ok) throw new Error('fetch failed: ' + r.status);
+  const j = await r.json();
+  dailyData = j.daily || {};
+  dataLoaded = true;
 }
-function saveDaily(data) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-
-let dailyData = loadDaily();
 
 const today = new Date();
 let adminMonth = { year: today.getFullYear(), month: today.getMonth() + 1 };
@@ -278,6 +273,7 @@ function monthDates(year, month) {
 }
 function isAfterLaunch(dateStr) { return dateStr >= AD_START; }
 function fmtDay(dateStr) { return parseInt(dateStr.slice(-2), 10) + "일"; }
+function fmtTime(d) { return d.toTimeString().slice(0, 8); }
 function currentMonthTotal() {
   const ym = `${today.getFullYear()}-${pad(today.getMonth() + 1)}`;
   return Object.entries(dailyData)
@@ -333,6 +329,7 @@ function renderPublicDaily() {
     `;
     tbody.appendChild(tr);
   });
+  document.getElementById("publicUpdatedAt").textContent = `마지막 업데이트: ${fmtTime(new Date())}`;
 }
 
 function renderAdminDailyChart() {
@@ -397,11 +394,12 @@ function fillForm(dateStr, entry) {
   document.getElementById("f-review").value = entry && entry.review != null ? entry.review : "";
 }
 
-function showToast(msg) {
+function showToast(msg, isError) {
   const t = document.getElementById("toast");
   t.textContent = msg;
+  t.classList.toggle("error", !!isError);
   t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 1800);
+  setTimeout(() => t.classList.remove("show"), 2200);
 }
 
 function refreshAll() {
@@ -416,7 +414,7 @@ function refreshAll() {
   }
 }
 
-document.getElementById("entryForm").addEventListener("submit", (e) => {
+document.getElementById("entryForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const dateStr = document.getElementById("f-date").value;
   if (!dateStr) return;
@@ -424,15 +422,32 @@ document.getElementById("entryForm").addEventListener("submit", (e) => {
     const v = document.getElementById(id).value;
     return v === "" ? null : Number(v);
   };
-  dailyData[dateStr] = {
+  const entry = {
     inflow: num("f-inflow"),
     call: num("f-call"),
     direction: num("f-direction"),
     review: num("f-review"),
   };
-  saveDaily(dailyData);
-  refreshAll();
-  showToast(`${dateStr} 저장 완료`);
+  const saveBtn = document.getElementById("saveBtn");
+  saveBtn.disabled = true;
+  saveBtn.textContent = "저장 중...";
+  try {
+    const r = await fetch('/api/data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: ADMIN_PASSWORD, date: dateStr, entry }),
+    });
+    if (!r.ok) throw new Error('save failed: ' + r.status);
+    const j = await r.json();
+    dailyData = j.daily || dailyData;
+    refreshAll();
+    showToast(`${dateStr} 저장 완료 (서버 반영됨)`);
+  } catch (err) {
+    showToast('저장 실패: 다시 시도해주세요', true);
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = "저장";
+  }
 });
 
 document.getElementById("clearFormBtn").addEventListener("click", () => {
@@ -457,6 +472,16 @@ document.getElementById("exportCsvBtn").addEventListener("click", () => {
   URL.revokeObjectURL(url);
 });
 
+document.getElementById("refreshBtn").addEventListener("click", async () => {
+  try {
+    await fetchDaily();
+    refreshAll();
+    showToast('새로고침 완료');
+  } catch (e) {
+    showToast('새로고침 실패', true);
+  }
+});
+
 document.getElementById("prevMonthBtn").addEventListener("click", () => {
   adminMonth.month -= 1;
   if (adminMonth.month < 1) { adminMonth.month = 12; adminMonth.year -= 1; }
@@ -476,7 +501,6 @@ function showView(view) {
   document.getElementById("adminGate").classList.toggle("hidden", view !== "gate");
   document.getElementById("adminView").classList.toggle("hidden", view !== "admin");
   if (view === "admin") {
-    // default date field to first missing date in the admin month
     const dates = monthDates(adminMonth.year, adminMonth.month);
     const missing = dates.find(d => !dailyData[d]);
     document.getElementById("f-date").value = missing || dates[dates.length - 1];
@@ -484,14 +508,32 @@ function showView(view) {
   }
 }
 
-function handleRoute() {
+let publicPollTimer = null;
+function startPublicPolling() {
+  if (publicPollTimer) return;
+  publicPollTimer = setInterval(async () => {
+    if (location.hash === "#admin") return;
+    try {
+      await fetchDaily();
+      renderPublicDaily();
+      if (monthlyChartPublic) monthlyChartPublic.destroy();
+      monthlyChartPublic = renderMonthlyChart("monthlyChartPublic");
+    } catch (e) {}
+  }, PUBLIC_POLL_MS);
+}
+
+async function handleRoute() {
   const hash = location.hash;
+  if (!dataLoaded) {
+    try { await fetchDaily(); } catch (e) { showToast('데이터를 불러오지 못했어요', true); }
+  }
   if (hash === "#admin") {
     const unlocked = sessionStorage.getItem(ADMIN_SESSION_KEY) === "1";
     showView(unlocked ? "admin" : "gate");
   } else {
     showView("public");
   }
+  refreshAll();
 }
 
 document.getElementById("gate-submit").addEventListener("click", attemptUnlock);
@@ -511,7 +553,7 @@ function attemptUnlock() {
 
 window.addEventListener("hashchange", handleRoute);
 handleRoute();
-refreshAll();
+startPublicPolling();
 </script>
 </body>
 </html>
