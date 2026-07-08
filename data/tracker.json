@@ -1,11 +1,52 @@
 {
   "daily": {
-    "2026-07-01": { "inflow": 17, "call": null, "direction": null, "review": null },
-    "2026-07-02": { "inflow": 12, "call": null, "direction": null, "review": null },
-    "2026-07-03": { "inflow": 33, "call": null, "direction": null, "review": null },
-    "2026-07-04": { "inflow": 15, "call": null, "direction": null, "review": null },
-    "2026-07-05": { "inflow": 16, "call": null, "direction": null, "review": null },
-    "2026-07-06": { "inflow": 15, "call": null, "direction": null, "review": null },
-    "2026-07-07": { "inflow": 10, "call": null, "direction": null, "review": null }
+    "2026-07-01": {
+      "inflow": 17,
+      "call": null,
+      "direction": null,
+      "review": null
+    },
+    "2026-07-02": {
+      "inflow": 12,
+      "call": null,
+      "direction": null,
+      "review": null
+    },
+    "2026-07-03": {
+      "inflow": 33,
+      "call": null,
+      "direction": null,
+      "review": null
+    },
+    "2026-07-04": {
+      "inflow": 15,
+      "call": null,
+      "direction": null,
+      "review": null
+    },
+    "2026-07-05": {
+      "inflow": 16,
+      "call": null,
+      "direction": null,
+      "review": null
+    },
+    "2026-07-06": {
+      "inflow": 15,
+      "call": null,
+      "direction": null,
+      "review": null
+    },
+    "2026-07-07": {
+      "inflow": 10,
+      "call": null,
+      "direction": null,
+      "review": null
+    },
+    "2026-07-08": {
+      "inflow": 18,
+      "call": null,
+      "direction": null,
+      "review": null
+    }
   }
 }
