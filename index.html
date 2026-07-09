@@ -39,6 +39,15 @@
     width: 120px;
   }
   .field input[type="date"] { width: 150px; }
+  .field select {
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 7px 9px;
+    font-size: 13px;
+    width: 140px;
+    background: #fff;
+    color: #1f2430;
+  }
   button {
     background: #4472c4;
     color: #fff;
@@ -119,7 +128,14 @@
   </div>
 
   <div class="card">
-    <h2><span id="publicDailyTitle">일별 상세</span></h2>
+    <h2>
+      <span id="publicDailyTitle">일별 상세</span>
+      <span class="month-nav">
+        <button type="button" class="icon" id="pubPrevMonthBtn">◀</button>
+        <span id="pubMonthLabel"></span>
+        <button type="button" class="icon" id="pubNextMonthBtn">▶</button>
+      </span>
+    </h2>
     <div class="table-scroll">
       <table>
         <thead>
@@ -190,6 +206,13 @@
         <label>리뷰수(당일 누적)</label>
         <input type="number" id="f-review" min="0" placeholder="선택" />
       </div>
+      <div class="field">
+        <label>광고상태</label>
+        <select id="f-adstatus">
+          <option value="on">ON (운영중)</option>
+          <option value="off">OFF (운영전)</option>
+        </select>
+      </div>
       <button type="submit" id="saveBtn">저장</button>
       <button type="button" class="secondary" id="clearFormBtn">폼 비우기</button>
     </form>
@@ -221,7 +244,7 @@
       <button type="button" class="secondary" id="exportCsvBtn">CSV로 내보내기</button>
       <button type="button" class="secondary" id="refreshBtn">새로고침</button>
     </div>
-    <div class="foot-note">광고 시작 예정일(2026-07-09) 이후는 자동으로 "운영중"으로 표시됩니다. 화살표로 이전/다음 달을 볼 수 있어요.</div>
+    <div class="foot-note">광고상태는 날짜별로 ON/OFF를 직접 설정해서 저장할 수 있어요. 저장하면 공개 페이지에도 바로 반영돼요. 화살표로 이전/다음 달을 볼 수 있어요.</div>
   </div>
 </div>
 
@@ -233,6 +256,7 @@ const AD_START = "2026-07-09";
 const ADMIN_SESSION_KEY = "goldPajuAdminUnlocked";
 const ADMIN_PASSWORD = "0909@";
 const PUBLIC_POLL_MS = 25000;
+const MIN_PUBLIC_MONTH = { year: 2026, month: 7 };
 
 const MONTHLY_HISTORY = [
   { label: "2025-07(9~31)", value: 468 },
@@ -272,6 +296,12 @@ function monthDates(year, month) {
   return dates;
 }
 function isAfterLaunch(dateStr) { return dateStr >= AD_START; }
+function getAdStatus(dateStr, entry) {
+  if (entry && (entry.adStatus === "on" || entry.adStatus === "off")) return entry.adStatus;
+  return isAfterLaunch(dateStr) ? "on" : "off";
+}
+function adStatusLabel(status) { return status === "on" ? "ON" : "OFF"; }
+function monthKey(year, month) { return year * 12 + month; }
 function fmtDay(dateStr) { return parseInt(dateStr.slice(-2), 10) + "일"; }
 function fmtTime(d) { return d.toTimeString().slice(0, 8); }
 function currentMonthTotal() {
@@ -314,29 +344,39 @@ function renderMonthlyChart(canvasId) {
 function renderPublicDaily() {
   const { year, month } = publicMonth;
   document.getElementById("publicDailyTitle").textContent = `${year}년 ${month}월 일별 상세`;
+  document.getElementById("pubMonthLabel").textContent = `${year}년 ${month}월`;
   const dates = monthDates(year, month);
   const tbody = document.getElementById("publicDailyTbody");
   tbody.innerHTML = "";
   dates.forEach(dateStr => {
     const entry = dailyData[dateStr];
-    const after = isAfterLaunch(dateStr);
+    const status = getAdStatus(dateStr, entry);
     const tr = document.createElement("tr");
     if (dateStr === AD_START) tr.className = "launch-row";
     tr.innerHTML = `
       <td>${dateStr}</td>
       <td>${entry && entry.inflow != null ? entry.inflow : "-"}</td>
-      <td><span class="tag ${after ? "after" : "before"}">${after ? "운영중" : "기준(운영전)"}</span></td>
+      <td><span class="tag ${status === "on" ? "after" : "before"}">${adStatusLabel(status)}</span></td>
     `;
     tbody.appendChild(tr);
   });
   document.getElementById("publicUpdatedAt").textContent = `마지막 업데이트: ${fmtTime(new Date())}`;
+  updatePublicNavButtons();
+}
+
+function updatePublicNavButtons() {
+  const atMin = monthKey(publicMonth.year, publicMonth.month) <= monthKey(MIN_PUBLIC_MONTH.year, MIN_PUBLIC_MONTH.month);
+  const prevBtn = document.getElementById("pubPrevMonthBtn");
+  prevBtn.disabled = atMin;
+  prevBtn.style.opacity = atMin ? "0.35" : "1";
+  prevBtn.style.cursor = atMin ? "default" : "pointer";
 }
 
 function renderAdminDailyChart() {
   const { year, month } = adminMonth;
   const dates = monthDates(year, month);
   const values = dates.map(d => (dailyData[d] ? dailyData[d].inflow : null));
-  const colors = dates.map(d => (isAfterLaunch(d) ? "#e0a800" : "#4472c4"));
+  const colors = dates.map(d => (getAdStatus(d, dailyData[d]) === "on" ? "#e0a800" : "#4472c4"));
   const ctx = document.getElementById("dailyChartAdmin");
   if (dailyChartAdmin) dailyChartAdmin.destroy();
   dailyChartAdmin = new Chart(ctx, {
@@ -352,7 +392,7 @@ function renderAdminDailyChart() {
         legend: { display: false },
         tooltip: {
           callbacks: {
-            afterLabel: (item) => (isAfterLaunch(dates[item.dataIndex]) ? "광고 운영중" : "기준(운영전)"),
+            afterLabel: (item) => "광고 " + adStatusLabel(getAdStatus(dates[item.dataIndex], dailyData[dates[item.dataIndex]])),
           },
         },
       },
@@ -370,7 +410,7 @@ function renderAdminDailyTable() {
   tbody.innerHTML = "";
   dates.forEach(dateStr => {
     const entry = dailyData[dateStr];
-    const after = isAfterLaunch(dateStr);
+    const status = getAdStatus(dateStr, entry);
     const tr = document.createElement("tr");
     tr.className = "editable-row" + (dateStr === AD_START ? " launch-row" : "");
     tr.innerHTML = `
@@ -379,7 +419,7 @@ function renderAdminDailyTable() {
       <td>${entry && entry.call != null ? entry.call : "-"}</td>
       <td>${entry && entry.direction != null ? entry.direction : "-"}</td>
       <td>${entry && entry.review != null ? entry.review : "-"}</td>
-      <td><span class="tag ${after ? "after" : "before"}">${after ? "운영중" : "기준(운영전)"}</span></td>
+      <td><span class="tag ${status === "on" ? "after" : "before"}">${adStatusLabel(status)}</span></td>
     `;
     tr.addEventListener("click", () => fillForm(dateStr, entry));
     tbody.appendChild(tr);
@@ -392,6 +432,7 @@ function fillForm(dateStr, entry) {
   document.getElementById("f-call").value = entry && entry.call != null ? entry.call : "";
   document.getElementById("f-direction").value = entry && entry.direction != null ? entry.direction : "";
   document.getElementById("f-review").value = entry && entry.review != null ? entry.review : "";
+  document.getElementById("f-adstatus").value = getAdStatus(dateStr, entry);
 }
 
 function showToast(msg, isError) {
@@ -427,6 +468,7 @@ document.getElementById("entryForm").addEventListener("submit", async (e) => {
     call: num("f-call"),
     direction: num("f-direction"),
     review: num("f-review"),
+    adStatus: document.getElementById("f-adstatus").value === "off" ? "off" : "on",
   };
   const saveBtn = document.getElementById("saveBtn");
   saveBtn.disabled = true;
@@ -460,8 +502,8 @@ document.getElementById("exportCsvBtn").addEventListener("click", () => {
   let csv = "날짜,유입수,전화클릭수,길찾기수,리뷰수(누적),광고상태\n";
   dates.forEach(dateStr => {
     const e = dailyData[dateStr] || {};
-    const after = isAfterLaunch(dateStr) ? "운영중" : "기준(운영전)";
-    csv += [dateStr, e.inflow ?? "", e.call ?? "", e.direction ?? "", e.review ?? "", after].join(",") + "\n";
+    const status = adStatusLabel(getAdStatus(dateStr, dailyData[dateStr]));
+    csv += [dateStr, e.inflow ?? "", e.call ?? "", e.direction ?? "", e.review ?? "", status].join(",") + "\n";
   });
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
@@ -495,6 +537,18 @@ document.getElementById("nextMonthBtn").addEventListener("click", () => {
   renderAdminDailyTable();
 });
 
+document.getElementById("pubPrevMonthBtn").addEventListener("click", () => {
+  if (monthKey(publicMonth.year, publicMonth.month) <= monthKey(MIN_PUBLIC_MONTH.year, MIN_PUBLIC_MONTH.month)) return;
+  publicMonth.month -= 1;
+  if (publicMonth.month < 1) { publicMonth.month = 12; publicMonth.year -= 1; }
+  renderPublicDaily();
+});
+document.getElementById("pubNextMonthBtn").addEventListener("click", () => {
+  publicMonth.month += 1;
+  if (publicMonth.month > 12) { publicMonth.month = 1; publicMonth.year += 1; }
+  renderPublicDaily();
+});
+
 // ---------- routing between public / admin ----------
 function showView(view) {
   document.getElementById("publicView").classList.toggle("hidden", view !== "public");
@@ -503,7 +557,8 @@ function showView(view) {
   if (view === "admin") {
     const dates = monthDates(adminMonth.year, adminMonth.month);
     const missing = dates.find(d => !dailyData[d]);
-    document.getElementById("f-date").value = missing || dates[dates.length - 1];
+    const targetDate = missing || dates[dates.length - 1];
+    fillForm(targetDate, dailyData[targetDate]);
     refreshAll();
   }
 }

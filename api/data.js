@@ -73,6 +73,7 @@ module.exports = async (req, res) => {
         call: entry.call === undefined ? null : entry.call,
         direction: entry.direction === undefined ? null : entry.direction,
         review: entry.review === undefined ? null : entry.review,
+        adStatus: entry.adStatus === "off" ? "off" : "on",
       };
 
       const putRes = await writeFile(data, sha, `Update ${date}`);
