@@ -1,19 +1,58 @@
 <!doctype html>
-<html>
+<html lang="ko">
 <head>
 <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>파주금촌점 플레이스 트래커</title>
+<link rel="manifest" href="/manifest.json" />
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+<meta name="theme-color" content="#4472c4" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="파주금촌 트래커" />
 <style>
   :root { color-scheme: light; }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", "Apple SD Gothic Neo", Arial, sans-serif;
     background: #f7f8fa;
     color: #1f2430;
-    padding: 20px 24px 40px;
+    padding: 16px 16px 36px;
   }
-  h1 { font-size: 19px; margin: 0 0 4px; }
+  @media (min-width: 640px) {
+    body { max-width: 480px; margin: 0 auto; padding: 20px 20px 40px; }
+  }
+  h1 { font-size: 17px; margin: 0 0 2px; line-height: 1.3; }
   .sub { color: #6b7280; font-size: 13px; margin-bottom: 20px; }
+  .sub-small { color: #9ca3af; font-size: 11.5px; }
+  .top-bar { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 16px; }
+  .admin-btn {
+    flex-shrink: 0;
+    background: #fff;
+    border: 1px solid #4472c4;
+    color: #4472c4;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .admin-btn:active { background: #eef2fb; }
+  .hero-card { text-align: center; }
+  .hero-label { font-size: 13px; color: #6b7280; font-weight: 600; margin-bottom: 6px; }
+  .hero-value-row { display: flex; align-items: baseline; justify-content: center; gap: 10px; }
+  .hero-value { font-size: 46px; font-weight: 700; color: #1f2430; line-height: 1; }
+  .hero-unit { font-size: 15px; color: #6b7280; }
+  .hero-delta { font-size: 14px; font-weight: 700; padding: 3px 10px; border-radius: 12px; }
+  .hero-delta.up { background: #e6f4ea; color: #1a7f37; }
+  .hero-delta.down { background: #fdecea; color: #d92d20; }
+  .hero-delta.flat { background: #eef2f5; color: #6b7280; }
+  .hero-sub { margin-top: 8px; font-size: 12px; color: #9ca3af; }
   .card {
     background: #fff;
     border: 1px solid #e5e7eb;
@@ -70,9 +109,9 @@
     background: #fff;
     color: #374151;
     border: 1px solid #d1d5db;
-    width: 30px; height: 30px; padding: 0;
+    width: 34px; height: 34px; padding: 0;
     font-size: 14px;
-    border-radius: 6px;
+    border-radius: 8px;
   }
   button.icon:hover { background: #f3f4f6; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -119,8 +158,23 @@
 
 <!-- ===================== PUBLIC VIEW ===================== -->
 <div id="publicView">
-  <h1>플레이스 유입 데이터 트래커 — 한국표준금거래소 파주금촌점</h1>
-  <div style="height:10px;"></div>
+  <div class="top-bar">
+    <div>
+      <h1>파주금촌점 플레이스 트래커</h1>
+      <div class="sub-small">한국표준금거래소 · 네이버 플레이스 광고 유입 데이터</div>
+    </div>
+    <a class="admin-btn" href="#admin">관리자</a>
+  </div>
+
+  <div class="card hero-card">
+    <div class="hero-label" id="heroDateLabel">어제 유입수</div>
+    <div class="hero-value-row">
+      <span class="hero-value" id="heroValue">-</span>
+      <span class="hero-unit">명</span>
+      <span class="hero-delta" id="heroDelta"></span>
+    </div>
+    <div class="hero-sub" id="heroSub"></div>
+  </div>
 
   <div class="card">
     <h2>월별 유입 추이 (2025-07 ~ 진행중)</h2>
@@ -146,9 +200,8 @@
     </div>
   </div>
 
-  <div class="page-footer">
+  <div class="page-footer" style="justify-content:center;">
     <span class="updated-at" id="publicUpdatedAt"></span>
-    <a href="#admin">관리자</a>
   </div>
 </div>
 
@@ -302,6 +355,50 @@ function getAdStatus(dateStr, entry) {
 }
 function adStatusLabel(status) { return status === "on" ? "ON" : "OFF"; }
 function monthKey(year, month) { return year * 12 + month; }
+function ymd(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+function fmtMonthDay(dateStr) { const [, m, d] = dateStr.split("-"); return `${parseInt(m, 10)}/${parseInt(d, 10)}`; }
+
+function renderHeroCard() {
+  const y = new Date(today); y.setDate(y.getDate() - 1);
+  const p = new Date(today); p.setDate(p.getDate() - 2);
+  const yStr = ymd(y);
+  const pStr = ymd(p);
+  const yEntry = dailyData[yStr];
+  const pEntry = dailyData[pStr];
+  const yVal = yEntry && yEntry.inflow != null ? yEntry.inflow : null;
+  const pVal = pEntry && pEntry.inflow != null ? pEntry.inflow : null;
+
+  document.getElementById("heroDateLabel").textContent = `어제(${fmtMonthDay(yStr)}) 유입수`;
+  document.getElementById("heroValue").textContent = yVal != null ? yVal : "-";
+
+  const deltaEl = document.getElementById("heroDelta");
+  const subEl = document.getElementById("heroSub");
+
+  if (yVal == null) {
+    deltaEl.textContent = "";
+    deltaEl.className = "hero-delta";
+    subEl.textContent = "아직 어제 데이터가 입력되지 않았어요.";
+    return;
+  }
+  if (pVal == null) {
+    deltaEl.textContent = "";
+    deltaEl.className = "hero-delta";
+    subEl.textContent = `그제(${fmtMonthDay(pStr)}) 데이터가 없어 비교할 수 없어요.`;
+    return;
+  }
+  const diff = yVal - pVal;
+  if (diff > 0) {
+    deltaEl.textContent = `▲ ${diff}`;
+    deltaEl.className = "hero-delta up";
+  } else if (diff < 0) {
+    deltaEl.textContent = `▼ ${Math.abs(diff)}`;
+    deltaEl.className = "hero-delta down";
+  } else {
+    deltaEl.textContent = `– 0`;
+    deltaEl.className = "hero-delta flat";
+  }
+  subEl.textContent = `그제(${fmtMonthDay(pStr)}) ${pVal}명 대비`;
+}
 function fmtDay(dateStr) { return parseInt(dateStr.slice(-2), 10) + "일"; }
 function fmtTime(d) { return d.toTimeString().slice(0, 8); }
 function currentMonthTotal() {
@@ -444,6 +541,7 @@ function showToast(msg, isError) {
 }
 
 function refreshAll() {
+  renderHeroCard();
   renderPublicDaily();
   if (monthlyChartPublic) monthlyChartPublic.destroy();
   monthlyChartPublic = renderMonthlyChart("monthlyChartPublic");
@@ -570,6 +668,7 @@ function startPublicPolling() {
     if (location.hash === "#admin") return;
     try {
       await fetchDaily();
+      renderHeroCard();
       renderPublicDaily();
       if (monthlyChartPublic) monthlyChartPublic.destroy();
       monthlyChartPublic = renderMonthlyChart("monthlyChartPublic");

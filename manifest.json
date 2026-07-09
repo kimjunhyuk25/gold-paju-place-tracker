@@ -1,0 +1,14 @@
+{
+  "name": "파주금촌점 플레이스 트래커",
+  "short_name": "파주금촌 트래커",
+  "description": "한국표준금거래소 파주금촌점 네이버 플레이스 광고 유입 데이터 트래커",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4472c4",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
