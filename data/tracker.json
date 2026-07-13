@@ -69,7 +69,7 @@
       "adStatus": "off"
     },
     "2026-07-11": {
-      "inflow": null,
+      "inflow": 39,
       "call": null,
       "direction": null,
       "review": null,
