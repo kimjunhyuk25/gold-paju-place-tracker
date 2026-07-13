@@ -118,7 +118,7 @@
   th, td { padding: 7px 8px; text-align: right; border-bottom: 1px solid #f0f1f3; }
   th:first-child, td:first-child { text-align: left; }
   th { color: #6b7280; font-weight: 600; background: #fafbfc; position: sticky; top: 0; }
-  tr.launch-row { background: #fff8e1; }
+  tr.today-row { background: #fff8e1; }
   tr.editable-row { cursor: pointer; }
   tr.editable-row:hover { background: #f3f6fd; }
   .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; }
@@ -357,6 +357,7 @@ function adStatusLabel(status) { return status === "on" ? "ON" : "OFF"; }
 function monthKey(year, month) { return year * 12 + month; }
 function ymd(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
 function fmtMonthDay(dateStr) { const [, m, d] = dateStr.split("-"); return `${parseInt(m, 10)}/${parseInt(d, 10)}`; }
+function isToday(dateStr) { return dateStr === ymd(new Date()); }
 
 function renderHeroCard() {
   const y = new Date(today); y.setDate(y.getDate() - 1);
@@ -449,7 +450,7 @@ function renderPublicDaily() {
     const entry = dailyData[dateStr];
     const status = getAdStatus(dateStr, entry);
     const tr = document.createElement("tr");
-    if (dateStr === AD_START) tr.className = "launch-row";
+    if (isToday(dateStr)) tr.className = "today-row";
     tr.innerHTML = `
       <td>${dateStr}</td>
       <td>${entry && entry.inflow != null ? entry.inflow : "-"}</td>
@@ -509,7 +510,7 @@ function renderAdminDailyTable() {
     const entry = dailyData[dateStr];
     const status = getAdStatus(dateStr, entry);
     const tr = document.createElement("tr");
-    tr.className = "editable-row" + (dateStr === AD_START ? " launch-row" : "");
+    tr.className = "editable-row" + (isToday(dateStr) ? " today-row" : "");
     tr.innerHTML = `
       <td>${dateStr}</td>
       <td>${entry && entry.inflow != null ? entry.inflow : "-"}</td>
