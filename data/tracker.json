@@ -49,10 +49,11 @@
       "review": null
     },
     "2026-08-01": {
-      "inflow": 0,
+      "inflow": 40,
       "call": null,
       "direction": null,
-      "review": null
+      "review": null,
+      "adStatus": "on"
     },
     "2026-07-09": {
       "inflow": 45,
