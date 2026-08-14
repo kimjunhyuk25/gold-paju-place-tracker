@@ -177,7 +177,7 @@
   </div>
 
   <div class="card">
-    <h2>월별 유입 추이 (2025-07 ~ 진행중)</h2>
+    <h2 class="monthly-title">월별 유입 추이 (2025-07 ~ 진행중)</h2>
     <div class="chart-wrap"><canvas id="monthlyChartPublic"></canvas></div>
   </div>
 
@@ -232,7 +232,7 @@
   <div class="sub">이 페이지는 관리자만 볼 수 있어요. 여기서 저장하면 서버에 반영되고, 공개 페이지에서도 새로고침하면 바로 보여요.</div>
 
   <div class="card">
-    <h2>월별 유입 추이 (2025-07 ~ 진행중)</h2>
+    <h2 class="monthly-title">월별 유입 추이 (2025-07 ~ 진행중)</h2>
     <div class="chart-wrap"><canvas id="monthlyChartAdmin"></canvas></div>
   </div>
 
@@ -310,6 +310,7 @@ const ADMIN_SESSION_KEY = "goldPajuAdminUnlocked";
 const ADMIN_PASSWORD = "0909@";
 const PUBLIC_POLL_MS = 25000;
 const MIN_PUBLIC_MONTH = { year: 2026, month: 7 };
+const TRACKED_START = { year: 2026, month: 7 };
 
 const MONTHLY_HISTORY = [
   { label: "2025-07(9~31)", value: 468 },
@@ -402,18 +403,43 @@ function renderHeroCard() {
 }
 function fmtDay(dateStr) { return parseInt(dateStr.slice(-2), 10) + "일"; }
 function fmtTime(d) { return d.toTimeString().slice(0, 8); }
-function currentMonthTotal() {
-  const ym = `${today.getFullYear()}-${pad(today.getMonth() + 1)}`;
+function monthTotal(ym) {
   return Object.entries(dailyData)
     .filter(([d]) => d.startsWith(ym))
     .reduce((sum, [, v]) => sum + (Number(v.inflow) || 0), 0);
+}
+function monthEntryCount(ym) {
+  return Object.keys(dailyData).filter(d => d.startsWith(ym)).length;
+}
+function currentMonthTotal() {
+  return monthTotal(`${today.getFullYear()}-${pad(today.getMonth() + 1)}`);
+}
+// MONTHLY_HISTORY(트래커 도입 이전 고정값) 뒤에, TRACKED_START 이후의 월은
+// dailyData에서 자동 집계해 이어붙인다. 달이 바뀌어도 지난달이 사라지지 않음.
+function buildMonthlySeries() {
+  const labels = MONTHLY_HISTORY.map(m => m.label);
+  const values = MONTHLY_HISTORY.map(m => m.value);
+  const curY = today.getFullYear(), curM = today.getMonth() + 1;
+  let y = TRACKED_START.year, m = TRACKED_START.month;
+  while (y * 12 + m <= curY * 12 + curM) {
+    const ym = `${y}-${pad(m)}`;
+    const isCur = (y === curY && m === curM);
+    if (isCur || monthEntryCount(ym) > 0) {
+      labels.push(isCur ? `${ym}(진행중)` : ym);
+      values.push(monthTotal(ym));
+    }
+    m++; if (m > 12) { m = 1; y++; }
+  }
+  return { labels, values };
 }
 
 let monthlyChartPublic, monthlyChartAdmin, dailyChartAdmin;
 
 function renderMonthlyChart(canvasId) {
-  const labels = MONTHLY_HISTORY.map(m => m.label).concat([`${today.getFullYear()}-${pad(today.getMonth() + 1)}(진행중)`]);
-  const values = MONTHLY_HISTORY.map(m => m.value).concat([currentMonthTotal()]);
+  const { labels, values } = buildMonthlySeries();
+  document.querySelectorAll(".monthly-title").forEach(el => {
+    el.textContent = `월별 유입 추이 (${String(labels[0]).slice(0, 7)} ~ 진행중)`;
+  });
   const ctx = document.getElementById(canvasId);
   const chart = new Chart(ctx, {
     type: "line",
