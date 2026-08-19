@@ -267,7 +267,7 @@
     },
     "2026-08-09": {
       "inflow": 31,
-      "call": null,
+      "call": 2,
       "direction": null,
       "review": null,
       "adStatus": "on"
