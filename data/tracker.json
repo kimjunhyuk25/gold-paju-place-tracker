@@ -232,7 +232,7 @@
     },
     "2026-08-04": {
       "inflow": 38,
-      "call": null,
+      "call": 6,
       "direction": null,
       "review": null,
       "adStatus": "on"
