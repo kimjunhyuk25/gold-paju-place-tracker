@@ -71,7 +71,7 @@
     },
     "2026-07-11": {
       "inflow": 39,
-      "call": null,
+      "call": 2,
       "direction": null,
       "review": null,
       "adStatus": "on"
