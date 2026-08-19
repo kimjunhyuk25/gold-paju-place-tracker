@@ -91,8 +91,8 @@
       "adStatus": "on"
     },
     "2026-07-14": {
-      "inflow": 31,
-      "call": null,
+      "inflow": 22,
+      "call": 2,
       "direction": null,
       "review": null,
       "adStatus": "on"
