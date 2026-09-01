@@ -420,8 +420,8 @@
       "adStatus": "on"
     },
     "2026-09-01": {
-      "inflow": 30,
-      "call": 2,
+      "inflow": 0,
+      "call": 0,
       "direction": null,
       "review": null,
       "adStatus": "on"
