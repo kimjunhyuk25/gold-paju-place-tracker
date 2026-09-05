@@ -446,6 +446,13 @@
       "direction": null,
       "review": null,
       "adStatus": "on"
+    },
+    "2026-09-04": {
+      "inflow": 33,
+      "call": 6,
+      "direction": null,
+      "review": null,
+      "adStatus": "on"
     }
   }
 }
