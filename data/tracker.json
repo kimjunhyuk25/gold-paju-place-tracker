@@ -810,6 +810,13 @@
       "direction": null,
       "review": null,
       "adStatus": "on"
+    },
+    "2026-10-26": {
+      "inflow": 22,
+      "call": 2,
+      "direction": null,
+      "review": null,
+      "adStatus": "on"
     }
   }
 }
