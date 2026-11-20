@@ -978,6 +978,13 @@
       "direction": null,
       "review": null,
       "adStatus": "on"
+    },
+    "2026-11-19": {
+      "inflow": 14,
+      "call": 6,
+      "direction": null,
+      "review": null,
+      "adStatus": "on"
     }
   }
 }
